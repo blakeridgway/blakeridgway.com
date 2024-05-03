@@ -8,8 +8,15 @@ fn index() -> &'static str {
     "Confirming Rocket is working"
 }
 
+#[get("/about")]
+fn about() -> &'static str {
+    "About Page"
+}
+
+
+
 #[launch]
 fn rocket() -> Rocket<Build> {
     rocket::build()
-    .mount("/", routes![index])
+    .mount("/", routes![index, about])
 }

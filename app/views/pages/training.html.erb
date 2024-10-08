@@ -1,0 +1,9 @@
+<% if @calendar_data.is_a?(Array) && @calendar_data.present? %>
+  <ul>
+    <% @calendar_data.each do |day| %>
+      <li><%= day %></li> <!-- Replace with actual day data -->
+    <% end %>
+  </ul>
+<% else %>
+  <p>No calendar data available or there was an error fetching data.</p>
+<% end %>

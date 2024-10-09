@@ -19,6 +19,7 @@ group :development, :test do
   gem "brakeman", require: false
   gem "rubocop-rails-omakase", require: false
   gem "dotenv-rails"
+  gem 'mini_racer', '~> 0.16.0'
 end
 
 group :development do

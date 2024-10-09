@@ -29,7 +29,7 @@ jobs:
           
       - name: Test SSH Connection
         run: |
-            ssh -o StrictHostKeyChecking=no -p 2222 ${{ secrets.SSH_USERNAME }}@${{ secrets.TAILSCALE_IP }} "echo 'Connection successful!'"
+            ssh -o StrictHostKeyChecking=no -p 2222 ${{ secrets.SSH_USERNAME }}@${{ secrets.IP }} "echo 'Connection successful!'"
             
       - name: Add Tailscale IP to known hosts
         run: |

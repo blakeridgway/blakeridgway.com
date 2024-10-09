@@ -32,7 +32,7 @@ jobs:
       - name: Deploy to Homelab Server
         run: |
           sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh -p 2222 -o StrictHostKeyChecking=no ${{ secrets.SSH_USERNAME }}@${{ secrets.IP }} << 'EOF'
-            cd blakeridgway
+            cd blakeridgway.com
             git pull origin main
             docker-compose down
             docker-compose up -d

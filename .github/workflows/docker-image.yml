@@ -33,7 +33,7 @@ jobs:
             
       - name: Add Tailscale IP to known hosts
         run: |
-          ssh-keyscan -p 2222 -H ${{ secrets.IP }} >> ~/.ssh/known_hosts || echo "Failed to retrieve key"
+          ssh-keyscan -v -H -p 2222 -H ${{ secrets.IP }} >> ~/.ssh/known_hosts || echo "Failed to retrieve key"
 
       - name: Deploy to Homelab Server
         run: |

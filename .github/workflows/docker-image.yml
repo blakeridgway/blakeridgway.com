@@ -26,14 +26,18 @@ jobs:
         uses: webfactory/ssh-agent@v0.5.4
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
+          
+      - name: Test SSH Connection
+        run: |
+            ssh -o StrictHostKeyChecking=no -p 2222 ${{ secrets.SSH_USERNAME }}@${{ secrets.TAILSCALE_IP }} "echo 'Connection successful!'"
+            
       - name: Add Tailscale IP to known hosts
         run: |
-          ssh-keyscan -H ${{ secrets.IP }} >> ~/.ssh/known_hosts
+          ssh-keyscan -p 2222 -H ${{ secrets.IP }} >> ~/.ssh/known_hosts || echo "Failed to retrieve key"
 
       - name: Deploy to Homelab Server
         run: |
-          ssh ${{ secrets.SSH_USERNAME }}@${{ secrets.IP }} -p 2222 << 'EOF'
+          ssh p 2222 ${{ secrets.SSH_USERNAME }}@${{ secrets.IP }} << 'EOF'
             cd blakeridgway
             git pull origin main
             docker-compose down

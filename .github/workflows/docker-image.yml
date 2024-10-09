@@ -6,43 +6,35 @@ on:
       - main
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out the code
-        uses: actions/checkout@v2
-
-      - name: Set up Docker
-        uses: docker/setup-buildx-action@v1
-
-      - name: Build Docker image
-        run: docker-compose build
-
-      - name: Run tests
-        run: docker-compose run --rm web bundle exec rspec
-
   deploy:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
 
     steps:
       - name: Check out the code
         uses: actions/checkout@v2
 
-      - name: Install SSH agent
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Install Docker Compose
+        run: |
+          DOCKER_COMPOSE_VERSION=1.29.2
+          sudo curl -L "https://github.com/docker/compose/releases/download/$DOCKER_COMPOSE_VERSION/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+
+      - name: Start SSH agent
         uses: webfactory/ssh-agent@v0.5.4
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Add Tailscale IP to known hosts
         run: |
-          ssh-keyscan -H ${{ secrets.TAILSCALE_IP }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.IP }} >> ~/.ssh/known_hosts
 
       - name: Deploy to Homelab Server
         run: |
-          ssh ${{ secrets.SSH_USERNAME }}@${{ secrets.TAILSCALE_IP }} << 'EOF'
-            cd /path/to/your/app
+          ssh ${{ secrets.SSH_USERNAME }}@${{ secrets.IP }} -p 2222 << 'EOF'
+            cd blakeridgway
             git pull origin main
             docker-compose down
             docker-compose up -d

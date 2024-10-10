@@ -14,6 +14,8 @@
  *= require_self
  */
 
+@import 'font-awesome';
+
 .profile-image img {
     width: 200px;
     height: 200px;
@@ -44,3 +46,19 @@
     }
 }
   
+.contact-icons {
+    display: flex;
+    justify-content: center;
+    gap: 20px; 
+    margin-top: 15px;
+  
+    a {
+      font-size: 24px;
+      color: #555;
+      transition: color 0.3s;
+  
+      &:hover {
+        color: #333;
+      }
+    }
+  }

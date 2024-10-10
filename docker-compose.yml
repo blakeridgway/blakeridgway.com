@@ -1,49 +1,14 @@
-name: CI/CD for Rails with Tailscale SSH
+version: '3.8'
 
-on:
-  push:
-    branches:
-      - main
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out the code
-        uses: actions/checkout@v2
-
-      - name: Set up Docker
-        uses: docker/setup-buildx-action@v1
-
-      - name: Build Docker image
-        run: docker-compose build
-
-      - name: Run tests
-        run: docker-compose run --rm web bundle exec rspec
-
-  deploy:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-      - name: Check out the code
-        uses: actions/checkout@v2
-
-      - name: Install SSH agent
-        uses: webfactory/ssh-agent@v0.5.4
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Add Tailscale IP to known hosts
-        run: |
-          ssh-keyscan -H ${{ secrets.IP }} >> ~/.ssh/known_hosts
-
-      - name: Deploy to Homelab Server
-        run: |
-          ssh ${{ secrets.SSH_USERNAME }}@${{ secrets.IP }} -p 2222 << 'EOF'
-            cd /path/to/your/app
-            git pull origin main
-            docker-compose down
-            docker-compose up -d
-          EOF
+services:
+  app:
+    image: ruby:3.2  # Specify the Ruby version you need
+    working_dir: /app
+    volumes:
+      - .:/app  # Mount the current directory to /app in the container
+    command: bash -c "bundle install && rails server -b 0.0.0.0"
+    ports:
+      - "3000:3000"  # Expose Rails server on port 3000
+    environment:
+      RAILS_ENV: development
+    tty: true  # Keep the terminal open

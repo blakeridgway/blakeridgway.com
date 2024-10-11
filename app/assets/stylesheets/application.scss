@@ -16,6 +16,16 @@
 
 @import 'font-awesome';
 
+.bike-image img {
+    padding-top: .5rem;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    margin: 0 auto;
+}
+
 .profile-image img {
     width: 200px;
     height: 200px;

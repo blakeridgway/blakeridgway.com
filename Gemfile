@@ -13,7 +13,7 @@ gem "bootstrap", "~> 5.3.0"
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 gem "bootsnap", require: false
 gem "sassc-rails"
-gem "font-awesome-sass", "~> 6.5", ">= 6.5.2"
+gem "font-awesome-sass", "~> 6.7"
 
 group :development, :test do
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"

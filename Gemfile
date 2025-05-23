@@ -9,7 +9,7 @@ gem "turbo-rails"
 gem "stimulus-rails"
 gem "jbuilder"
 gem "bcrypt", "~> 3.1.7"
-gem "bootstrap", "~> 5.3.0"
+gem "bootstrap", "~> 5.3.5"
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 gem "bootsnap", require: false
 gem "sassc-rails"

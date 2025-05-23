@@ -50,12 +50,12 @@ public class CurrentWeather
     public string? Time { get; set; } // ISO8601 timestamp
 }
 
-// A class to hold the processed, displayable weather data (can be reused or adapted)
+// A class to hold the processed, displayable weather data
 public class ProcessedOpenMeteoData
 {
     public DateTime ObservationTime { get; set; }
     public double TemperatureC { get; set; }
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+    public double TemperatureF => TemperatureC * 9.0 / 5.0 + 32.0;
     public double WindSpeedKmh { get; set; }
     public double WindSpeedMph => WindSpeedKmh * 0.621371;
     public string WindDirectionCardinal { get; set; } = "N/A";

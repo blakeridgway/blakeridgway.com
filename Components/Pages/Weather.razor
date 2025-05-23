@@ -1,15 +1,27 @@
 ﻿@page "/weather"
+@rendermode InteractiveServer
 @inject IHttpClientFactory HttpClientFactory
 @using System.Text.Json
 @using BlazorBlog.Models
 @attribute [StreamRendering]
 
-<PageTitle>Oklahoma City Weather (Open-Meteo)</PageTitle>
+<PageTitle>Oklahoma Weather (Open-Meteo)</PageTitle>
 
-<h1>Oklahoma City Weather</h1>
+<h1>Oklahoma Weather</h1>
 <p>
     Sourced from <a href="https://open-meteo.com/" target="_blank">Open-Meteo.com</a> (free, open-source weather API).
 </p>
+
+<div class="mb-3">
+    <label for="citySelect" class="form-label">Select City:</label>
+    <select id="citySelect" class="form-select" value="@selectedCityKey" @onchange="OnCityChangedAsync">
+        @foreach (var city in Cities)
+        {
+            <option value="@city.Key">@city.Value.Name</option>
+        }
+    </select>
+    @* The button has been removed *@
+</div>
 
 @if (isLoading)
 {
@@ -27,7 +39,7 @@ else
 {
     <div class="card">
         <div class="card-header">
-            Current Conditions for Oklahoma City
+            Current Conditions for @Cities[selectedCityKey].Name
             (@(weatherData.IsDay ? "Daytime" : "Nighttime"))
         </div>
         <ul class="list-group list-group-flush">
@@ -35,7 +47,7 @@ else
                 <strong>Time:</strong> @weatherData.ObservationTime.ToLocalTime().ToString("g")
             </li>
             <li class="list-group-item">
-                <strong>Temperature:</strong> @weatherData.TemperatureC.ToString("F1") °C / @weatherData.TemperatureF °F
+                <strong>Temperature:</strong> @weatherData.TemperatureC.ToString("F1") °C / @weatherData.TemperatureF.ToString("F1") °F
             </li>
             <li class="list-group-item">
                 <strong>Conditions:</strong> @weatherData.WeatherDescription
@@ -55,32 +67,68 @@ else
     private bool isLoading = true;
     private string? errorMessage;
 
-    // Oklahoma City Coordinates
-    private const double Latitude = 35.4676;
-    private const double Longitude = -97.5164;
+    private record CityInfo(string Name, double Latitude, double Longitude);
+
+    private Dictionary<string, CityInfo> Cities = new()
+    {
+        { "okc", new CityInfo("Oklahoma City", 35.4676, -97.5164) },
+        { "enid", new CityInfo("Enid", 36.3956, -97.8784) }
+    };
+
+    private string selectedCityKey = "okc"; // Default selection
+
     private const string OpenMeteoApiBaseUrl = "https://api.open-meteo.com/v1/forecast";
 
     protected override async Task OnInitializedAsync()
     {
+        Console.WriteLine("DEBUG: Weather.razor - OnInitializedAsync START");
+        await LoadWeatherAsync();
+        Console.WriteLine("DEBUG: Weather.razor - OnInitializedAsync END");
+    }
+
+    // This method is called when the dropdown selection changes
+    private async Task OnCityChangedAsync(ChangeEventArgs e)
+    {
+        selectedCityKey = e.Value?.ToString() ?? "okc"; // Update the selectedCityKey
+        Console.WriteLine($"DEBUG: Weather.razor - OnCityChangedAsync. New city key: '{selectedCityKey}'");
+        await LoadWeatherAsync(); // Reload weather data for the new city
+        Console.WriteLine("DEBUG: Weather.razor - OnCityChangedAsync FINISHED.");
+    }
+
+    // The OnSelectCity method is no longer needed and can be removed
+
+    private async Task LoadWeatherAsync()
+    {
+        Console.WriteLine($"DEBUG: Weather.razor - LoadWeatherAsync START for city key: '{selectedCityKey}'");
         isLoading = true;
         errorMessage = null;
+        weatherData = null;
+        StateHasChanged(); // Show loading state
+
+        if (!Cities.ContainsKey(selectedCityKey))
+        {
+            errorMessage = $"Invalid city key selected: '{selectedCityKey}'";
+            Console.WriteLine($"ERROR: Weather.razor - {errorMessage}");
+            isLoading = false;
+            StateHasChanged();
+            return;
+        }
+        var city = Cities[selectedCityKey];
+        Console.WriteLine($"DEBUG: Weather.razor - City to load: {city.Name}, Lat: {city.Latitude}, Lon: {city.Longitude}");
+
         try
         {
             var client = HttpClientFactory.CreateClient();
-
-            // Construct the API URL
-            // Parameters:
-            // current_weather=true - to get current conditions
-            // temperature_unit=celsius - can also be fahrenheit
-            // windspeed_unit=kmh - can be ms, mph, kn
-            // timezone=auto - API will detect timezone from lat/lon, or specify (e.g., America/Chicago)
-            var requestUrl = $"{OpenMeteoApiBaseUrl}?latitude={Latitude}&longitude={Longitude}&current_weather=true&temperature_unit=celsius&windspeed_unit=kmh&timezone=auto";
+            var requestUrl =
+                $"{OpenMeteoApiBaseUrl}?latitude={city.Latitude}&longitude={city.Longitude}&current_weather=true&temperature_unit=celsius&windspeed_unit=kmh&timezone=auto";
+            Console.WriteLine($"DEBUG: Weather.razor - Requesting URL: {requestUrl}");
 
             var response = await client.GetAsync(requestUrl);
 
             if (response.IsSuccessStatusCode)
             {
                 var jsonString = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"DEBUG: Weather.razor - API Response JSON: {jsonString.Substring(0, Math.Min(jsonString.Length, 200))}...");
                 var apiResponse = JsonSerializer.Deserialize<OpenMeteoApiResponse>(jsonString,
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
@@ -95,24 +143,31 @@ else
                         WeatherDescription = InterpretWeatherCode(apiResponse.CurrentWeather.WeatherCode),
                         IsDay = apiResponse.CurrentWeather.IsDay == 1
                     };
+                    Console.WriteLine($"DEBUG: Weather.razor - Weather data processed for {city.Name}. TempC: {weatherData.TemperatureC}");
                 }
                 else
                 {
                     errorMessage = "No current weather data returned from Open-Meteo API.";
+                    Console.WriteLine($"ERROR: Weather.razor - {errorMessage}");
                 }
             }
             else
             {
-                errorMessage = $"Error fetching data from Open-Meteo: {response.StatusCode} - {await response.Content.ReadAsStringAsync()}";
+                var errorContent = await response.Content.ReadAsStringAsync();
+                errorMessage = $"Error fetching data from Open-Meteo: {response.StatusCode} - {errorContent}";
+                Console.WriteLine($"ERROR: Weather.razor - {errorMessage}");
             }
         }
         catch (Exception ex)
         {
             errorMessage = $"An error occurred: {ex.Message}";
+            Console.WriteLine($"ERROR: Weather.razor - Exception: {ex.ToString()}");
         }
         finally
         {
             isLoading = false;
+            Console.WriteLine($"DEBUG: Weather.razor - LoadWeatherAsync FINISHED for city key: '{selectedCityKey}'. Calling StateHasChanged.");
+            StateHasChanged();
         }
     }
 
@@ -122,8 +177,6 @@ else
         return cardinals[(int)Math.Round(degrees % 360 / 22.5)];
     }
 
-    // WMO Weather interpretation codes (subset)
-    // Full list: https://open-meteo.com/en/docs#weathervariables
     private string InterpretWeatherCode(int code)
     {
         return code switch
@@ -153,7 +206,7 @@ else
             82 => "Violent rain showers",
             85 => "Slight snow showers",
             86 => "Heavy snow showers",
-            95 => "Thunderstorm: Slight or moderate", // Can be combined with 96/99 for hail
+            95 => "Thunderstorm: Slight or moderate",
             96 => "Thunderstorm with slight hail",
             99 => "Thunderstorm with heavy hail",
             _ => $"Unknown code ({code})"

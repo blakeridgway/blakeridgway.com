@@ -1,0 +1,65 @@
+@page "/blog/{Slug}"
+@using BlazorBlog.Models
+@using BlazorBlog.Services
+@inject IBlogService BlogService
+@using Markdig
+
+@if (post == null && !isLoading)
+{
+    <PageTitle>Post Not Found</PageTitle>
+    <h1>Post Not Found</h1>
+    <p>Sorry, we couldn't find the post you're looking for.</p>
+    <p><a href="/blog">Back to Blog</a></p>
+}
+else if (post == null && isLoading)
+{
+    <PageTitle>Loading...</PageTitle>
+    <p><em>Loading post...</em></p>
+}
+else if (post != null)
+{
+    <PageTitle>@post.Title</PageTitle>
+
+    <article class="blog-post-full">
+        <h1>@post.Title</h1>
+        <p class="post-meta">
+            Published on @post.PublishedDate.ToLongDateString()
+            @if (!string.IsNullOrEmpty(post.Author))
+            {
+                <span>by @post.Author</span>
+            }
+        </p>
+        <hr />
+        <div>
+            @if (!string.IsNullOrEmpty(post.Content))
+            {
+                @((MarkupString)Markdown.ToHtml(post.Content))
+            }
+            else
+            {
+                <p><em>This post has no content.</em></p>
+            }
+        </div>
+    </article>
+    <p><a href="/blog">Back to Blog List</a></p>
+}
+
+
+@code {
+    [Parameter]
+    public string? Slug { get; set; }
+
+    private BlogPost? post;
+    private bool isLoading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        post = null; // Reset post if slug changes
+        if (!string.IsNullOrEmpty(Slug))
+        {
+            post = await BlogService.GetPostBySlugAsync(Slug);
+        }
+        isLoading = false;
+    }
+}

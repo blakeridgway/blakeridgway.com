@@ -1,0 +1,51 @@
+@page "/blog"
+@using BlazorBlog.Models
+@using BlazorBlog.Services
+@inject IBlogService BlogService
+
+<PageTitle>Blake's Blog</PageTitle>
+
+<div class="text-center">
+    <h1>Blake's Blog</h1>
+</div>
+
+@if (posts == null)
+{
+    <p><em>Loading posts...</em></p>
+}
+else if (!posts.Any())
+{
+    <p>No posts found yet. Check back soon!</p>
+}
+else
+{
+    <div class="blog-posts-list">
+        @foreach (var post in posts)
+        {
+            <article class="blog-post-summary">
+                <h2><a href="/blog/@post.Slug">@post.Title</a></h2>
+                <p class="post-meta">
+                    Published on @post.PublishedDate.ToShortDateString()
+                    @if (!string.IsNullOrEmpty(post.Author))
+                    {
+                        <span>by @post.Author</span>
+                    }
+                </p>
+                @if (!string.IsNullOrEmpty(post.Summary))
+                {
+                    <p>@post.Summary</p>
+                }
+                <a href="/blog/@post.Slug" class="read-more">Read more...</a>
+            </article>
+        }
+    </div>
+}
+
+@code {
+    private IEnumerable<BlogPost>? posts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        posts = await BlogService.GetPostsAsync();
+    }
+}

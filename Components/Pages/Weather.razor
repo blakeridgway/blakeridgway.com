@@ -1,0 +1,162 @@
+﻿@page "/weather"
+@inject IHttpClientFactory HttpClientFactory
+@using System.Text.Json
+@using BlazorBlog.Models
+@attribute [StreamRendering]
+
+<PageTitle>Oklahoma City Weather (Open-Meteo)</PageTitle>
+
+<h1>Oklahoma City Weather</h1>
+<p>
+    Sourced from <a href="https://open-meteo.com/" target="_blank">Open-Meteo.com</a> (free, open-source weather API).
+</p>
+
+@if (isLoading)
+{
+    <p><em>Loading weather data...</em></p>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <p><em><strong class="text-danger">Error:</strong> @errorMessage</em></p>
+}
+else if (weatherData == null)
+{
+    <p><em>No weather data available at the moment.</em></p>
+}
+else
+{
+    <div class="card">
+        <div class="card-header">
+            Current Conditions for Oklahoma City
+            (@(weatherData.IsDay ? "Daytime" : "Nighttime"))
+        </div>
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item">
+                <strong>Time:</strong> @weatherData.ObservationTime.ToLocalTime().ToString("g")
+            </li>
+            <li class="list-group-item">
+                <strong>Temperature:</strong> @weatherData.TemperatureC.ToString("F1") °C / @weatherData.TemperatureF °F
+            </li>
+            <li class="list-group-item">
+                <strong>Conditions:</strong> @weatherData.WeatherDescription
+            </li>
+            <li class="list-group-item">
+                <strong>Wind:</strong> @weatherData.WindSpeedKmh.ToString("F1") km/h (@weatherData.WindSpeedMph.ToString("F1") mph) from @weatherData.WindDirectionCardinal
+            </li>
+        </ul>
+        <div class="card-footer text-muted">
+            Last updated: @weatherData.ObservationTime.ToLocalTime().ToString("g")
+        </div>
+    </div>
+}
+
+@code {
+    private ProcessedOpenMeteoData? weatherData;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    // Oklahoma City Coordinates
+    private const double Latitude = 35.4676;
+    private const double Longitude = -97.5164;
+    private const string OpenMeteoApiBaseUrl = "https://api.open-meteo.com/v1/forecast";
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            var client = HttpClientFactory.CreateClient();
+
+            // Construct the API URL
+            // Parameters:
+            // current_weather=true - to get current conditions
+            // temperature_unit=celsius - can also be fahrenheit
+            // windspeed_unit=kmh - can be ms, mph, kn
+            // timezone=auto - API will detect timezone from lat/lon, or specify (e.g., America/Chicago)
+            var requestUrl = $"{OpenMeteoApiBaseUrl}?latitude={Latitude}&longitude={Longitude}&current_weather=true&temperature_unit=celsius&windspeed_unit=kmh&timezone=auto";
+
+            var response = await client.GetAsync(requestUrl);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonString = await response.Content.ReadAsStringAsync();
+                var apiResponse = JsonSerializer.Deserialize<OpenMeteoApiResponse>(jsonString,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (apiResponse?.CurrentWeather != null)
+                {
+                    weatherData = new ProcessedOpenMeteoData
+                    {
+                        ObservationTime = DateTime.TryParse(apiResponse.CurrentWeather.Time, out var dt) ? dt : DateTime.UtcNow,
+                        TemperatureC = apiResponse.CurrentWeather.Temperature,
+                        WindSpeedKmh = apiResponse.CurrentWeather.Windspeed,
+                        WindDirectionCardinal = ConvertDegreesToCardinal(apiResponse.CurrentWeather.WindDirection),
+                        WeatherDescription = InterpretWeatherCode(apiResponse.CurrentWeather.WeatherCode),
+                        IsDay = apiResponse.CurrentWeather.IsDay == 1
+                    };
+                }
+                else
+                {
+                    errorMessage = "No current weather data returned from Open-Meteo API.";
+                }
+            }
+            else
+            {
+                errorMessage = $"Error fetching data from Open-Meteo: {response.StatusCode} - {await response.Content.ReadAsStringAsync()}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string ConvertDegreesToCardinal(double degrees)
+    {
+        string[] cardinals = { "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "N" };
+        return cardinals[(int)Math.Round(degrees % 360 / 22.5)];
+    }
+
+    // WMO Weather interpretation codes (subset)
+    // Full list: https://open-meteo.com/en/docs#weathervariables
+    private string InterpretWeatherCode(int code)
+    {
+        return code switch
+        {
+            0 => "Clear sky",
+            1 => "Mainly clear",
+            2 => "Partly cloudy",
+            3 => "Overcast",
+            45 => "Fog",
+            48 => "Depositing rime fog",
+            51 => "Light drizzle",
+            53 => "Moderate drizzle",
+            55 => "Dense drizzle",
+            56 => "Light freezing drizzle",
+            57 => "Dense freezing drizzle",
+            61 => "Slight rain",
+            63 => "Moderate rain",
+            65 => "Heavy rain",
+            66 => "Light freezing rain",
+            67 => "Heavy freezing rain",
+            71 => "Slight snow fall",
+            73 => "Moderate snow fall",
+            75 => "Heavy snow fall",
+            77 => "Snow grains",
+            80 => "Slight rain showers",
+            81 => "Moderate rain showers",
+            82 => "Violent rain showers",
+            85 => "Slight snow showers",
+            86 => "Heavy snow showers",
+            95 => "Thunderstorm: Slight or moderate", // Can be combined with 96/99 for hail
+            96 => "Thunderstorm with slight hail",
+            99 => "Thunderstorm with heavy hail",
+            _ => $"Unknown code ({code})"
+        };
+    }
+}

@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "ostSwDS+maI=",
+  "success": true,
+  "projectFilePath": "/home/blake/Projects/personal/blakeridgway.com/blazorblog.csproj",
+  "expectedPackageFiles": [
+    "/home/blake/.nuget/packages/markdig/0.41.1/markdig.0.41.1.nupkg.sha512"
+  ],
+  "logs": []
+}
